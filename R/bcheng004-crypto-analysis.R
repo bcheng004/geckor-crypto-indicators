@@ -3,6 +3,8 @@ remove(list=ls())
 cat("\014")
 # init packrat
 packrat::init(getwd())
+## Take a snapshot of installed packages
+packrat::snapshot()
 # load libraries
 library(geckor)
 library(dplyr)
@@ -28,13 +30,16 @@ current_market(coin_ids = c("cardano", "algorand", "polkadot"), vs_currency = "u
 cardano_history <- coin_history(coin_id = "cardano", 
                                 vs_currency = "usd", 
                                 days = "max")
-head(cardano_history)
+# head(cardano_history)
 cardano_history %>% ggplot(aes(timestamp, price)) + geom_line() + theme_minimal()
 # basic technical indicators
 lookback_window <- 14
+# Daily Returns
 cardano_ts <- xts(cardano_history$price,cardano_history$timestamp)
 cardano_daily_ret <- dailyReturn(cardano_ts)
+cardano_daily_ret %>% ggplot(aes(Index,daily.returns)) + geom_line() + theme_minimal()
+# Relative Strength Index
 cardano_rsi <- RSI(cardano_history$price, n = lookback_window, maType = "SMA")
-plot(cardano_daily_ret)
-## Take a snapshot of installed packages
-packrat::snapshot()
+cardano_rsi_ts <- xts(cardano_rsi,cardano_history$timestamp)
+colnames(cardano_rsi_ts) <- c("rsi")
+cardano_rsi_ts %>% ggplot(aes(Index,rsi)) + geom_line() + theme_minimal()
