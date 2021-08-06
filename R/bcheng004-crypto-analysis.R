@@ -11,6 +11,7 @@ library(stringr)
 library(TTR)
 library(quantmod)
 library(glue)
+library(lubridate)
 # check API service available
 coin_gecko_api_status <- ping()
 # Filter for supported coins on coin gecko
@@ -68,9 +69,12 @@ colnames(ADA) <- c(
 # cardano_rsi_ts %>% ggplot(aes(Index,rsi)) + geom_line() + theme_minimal()
 
 # quantmod chartSeries
-chartSeries(ADA, subset='2017-10-19::2018-10-19',
+lookback_window <- 14
+curr_date <- Sys.Date()
+start_date <- curr_date %m+% months(-3)
+chartSeries(ADA, subset=glue('{start_date}::{curr_date}'),
             theme=chartTheme('white',up.col='green',dn.col='red'),
-            TA=c(addBBands(n=20,sd=2,),addSMA(n=50,col="blue"),addSMA(n=10,col="black"),addRSI(n=14)))
-
+            TA=c(addBBands(n=lookback_window,sd=2,),addSMA(n=lookback_window,col="black"),addRSI(n=lookback_window)))
+# next take a look at modeltime package for forecasting
 ## Take a snapshot of installed packages
 packrat::snapshot()
