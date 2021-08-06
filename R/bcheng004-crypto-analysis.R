@@ -71,10 +71,11 @@ colnames(ADA) <- c(
 # quantmod chartSeries
 lookback_window <- 14
 curr_date <- Sys.Date()
-start_date <- curr_date %m+% months(-3)
+start_date <- curr_date %m+% years(x=-1)
 chartSeries(ADA, subset=glue('{start_date}::{curr_date}'),
-            theme=chartTheme('white',up.col='green',dn.col='red'),
+            theme=chartTheme('black',up.col='green',dn.col='red'),
             TA=c(addBBands(n=lookback_window,sd=2,),addSMA(n=lookback_window,col="black"),addRSI(n=lookback_window)))
+candleChart(ADA,subset=glue('{start_date}::{curr_date}'),theme='black',type='candles')
 # next take a look at modeltime package for forecasting
 ## Take a snapshot of installed packages
 packrat::snapshot()
