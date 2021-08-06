@@ -3,8 +3,6 @@ remove(list=ls())
 cat("\014")
 # init packrat
 packrat::init(getwd())
-## Take a snapshot of installed packages
-packrat::snapshot()
 # load libraries
 library(geckor)
 library(dplyr)
@@ -12,6 +10,7 @@ library(ggplot2)
 library(stringr)
 library(TTR)
 library(quantmod)
+library(glue)
 # check API service available
 coin_gecko_api_status <- ping()
 # Filter for supported coins on coin gecko
@@ -22,24 +21,56 @@ if(coin_gecko_api_status){
     is.data.frame(coin_tbl)
   }
 }
-coin_tbl %>% filter(str_detect(symbol, "btc"))
+chosen_coin_id <-"cardano"
+crypto_ticker <- coin_tbl %>% filter(str_detect(coin_id, glue("^{chosen_coin_id}$"))) %>% select(symbol)
 # Current price and market conditions
-current_price(coin_ids = c("cardano", "algorand", "polkadot", "bitcoin"), vs_currencies = c("usd"))
-current_market(coin_ids = c("cardano", "algorand", "polkadot"), vs_currency = "usd") %>% glimpse()
+current_bool <- FALSE
+if (current_bool){
+  current_price(coin_ids = c("cardano", "algorand", "polkadot", "bitcoin"), vs_currencies = c("usd"))
+  current_market(coin_ids = c("cardano", "algorand", "polkadot"), vs_currency = "usd") %>% glimpse()
+}
 # a look at cardano
-cardano_history <- coin_history(coin_id = "cardano", 
+cardano_history <- coin_history(coin_id = glue("{chosen_coin_id}"), 
                                 vs_currency = "usd", 
                                 days = "max")
-# head(cardano_history)
-cardano_history %>% ggplot(aes(timestamp, price)) + geom_line() + theme_minimal()
+cardano_history_ohlc <- coin_history_ohlc(coin_id = glue("{chosen_coin_id}"),
+                                          vs_currency = "usd", 
+                                          days = "max")
+history_merge_cols <- c(colnames(cardano_history)[1:3])
+cardano_history_total <- merge(cardano_history,cardano_history_ohlc,by=history_merge_cols)
+ADA <- xts(cardano_history_total[,c("price_open","price_high","price_low","price_close","total_volume","price")],
+                          cardano_history_total$timestamp)
+colnames(ADA) <- c(
+  glue("{crypto_ticker}.Open"),
+  glue("{crypto_ticker}.High"),
+  glue("{crypto_ticker}.Low"),
+  glue("{crypto_ticker}.Close"),
+  glue("{crypto_ticker}.Volume"),
+  glue("{crypto_ticker}.Adjusted")
+  )
+# cardano_history %>% ggplot(aes(timestamp, price)) + geom_line() + theme_minimal()
+
 # basic technical indicators
-lookback_window <- 14
+
+# lookback_window <- 14
+
 # Daily Returns
-cardano_ts <- xts(cardano_history$price,cardano_history$timestamp)
-cardano_daily_ret <- dailyReturn(cardano_ts)
-cardano_daily_ret %>% ggplot(aes(Index,daily.returns)) + geom_line() + theme_minimal()
+
+# cardano_price_ts <- xts(cardano_history$price,cardano_history$timestamp)
+# cardano_daily_ret <- dailyReturn(cardano_price_ts)
+# cardano_daily_ret %>% ggplot(aes(Index,daily.returns)) + geom_line() + theme_minimal()
+
 # Relative Strength Index
-cardano_rsi <- RSI(cardano_history$price, n = lookback_window, maType = "SMA")
-cardano_rsi_ts <- xts(cardano_rsi,cardano_history$timestamp)
-colnames(cardano_rsi_ts) <- c("rsi")
-cardano_rsi_ts %>% ggplot(aes(Index,rsi)) + geom_line() + theme_minimal()
+
+# cardano_rsi <- RSI(cardano_history$price, n = lookback_window, maType = "SMA")
+# cardano_rsi_ts <- xts(cardano_rsi,cardano_history$timestamp)
+# colnames(cardano_rsi_ts) <- c("rsi")
+# cardano_rsi_ts %>% ggplot(aes(Index,rsi)) + geom_line() + theme_minimal()
+
+# quantmod chartSeries
+chartSeries(ADA, subset='2017-10-19::2018-10-19',
+            theme=chartTheme('white',up.col='green',dn.col='red'),
+            TA=c(addBBands(n=20,sd=2,),addSMA(n=50,col="blue"),addSMA(n=10,col="black"),addRSI(n=14)))
+
+## Take a snapshot of installed packages
+packrat::snapshot()
