@@ -4,14 +4,19 @@ cat("\014")
 # init packrat
 packrat::init(getwd())
 # load libraries
-library(geckor)
-library(dplyr)
-library(ggplot2)
-library(stringr)
-library(TTR)
-library(quantmod)
-library(glue)
-library(lubridate)
+suppressPackageStartupMessages(library(geckor))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(TTR))
+suppressPackageStartupMessages(library(quantmod))
+suppressPackageStartupMessages(library(glue))
+suppressPackageStartupMessages(library(lubridate))
+suppressPackageStartupMessages(library(xgboost))
+suppressPackageStartupMessages(library(tidymodels))
+suppressPackageStartupMessages(library(modeltime))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(timetk))
 # check API service available
 coin_gecko_api_status <- ping()
 # Filter for supported coins on coin gecko
@@ -75,7 +80,9 @@ start_date <- curr_date %m+% years(x=-1)
 chartSeries(ADA, subset=glue('{start_date}::{curr_date}'),
             theme=chartTheme('black',up.col='green',dn.col='red'),
             TA=c(addBBands(n=lookback_window,sd=2,),addSMA(n=lookback_window,col="black"),addRSI(n=lookback_window)))
-candleChart(ADA,subset=glue('{start_date}::{curr_date}'),theme='black',type='candles')
+candleChart(ADA,subset=glue('{start_date}::{curr_date}'),
+            theme=chartTheme('black',up.col='green',dn.col='red'),
+            type='candles')
 # next take a look at modeltime package for forecasting
 ## Take a snapshot of installed packages
 packrat::snapshot()
