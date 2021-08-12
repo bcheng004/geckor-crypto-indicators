@@ -84,5 +84,16 @@ candleChart(ADA,subset=glue('{start_date}::{curr_date}'),
             theme=chartTheme('black',up.col='green',dn.col='red'),
             type='candles')
 # next take a look at modeltime package for forecasting
+interactive <- FALSE
+cardano_history_total %>% plot_time_series(timestamp,price_close,.interactive=interactive)
+splits <- initial_time_split(cardano_history_total, prop = 0.9)
+# Model 1: auto_arima
+model_fit_arima_no_boost <- arima_reg() %>%
+  set_engine(engine="auto_arima") %>% 
+  fit(price_close~timestamp,data=training(splits))
+#> frequency = 24 observations per 1 quarter
+
+# Model 2: arima_boost
+
 ## Take a snapshot of installed packages
 packrat::snapshot()
