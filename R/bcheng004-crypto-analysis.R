@@ -94,6 +94,11 @@ model_fit_arima_no_boost <- arima_reg() %>%
 #> frequency = 24 observations per 1 quarter
 
 # Model 2: arima_boost
+model_fit_arima_boosted <- arima_boost(min_n=2,learn_rate=0.015) %>%
+  set_engine(engine="auto_arima_xgboost") %>%
+  fit(price_close~timestamp+as.numeric(timestamp)+factor(month(timestamp,label=TRUE),ordered=F),
+      data=training(splits))
+#> frequency = 24 observations per 1 quarter
 
 ## Take a snapshot of installed packages
 packrat::snapshot()
