@@ -56,23 +56,6 @@ colnames(ADA) <- c(
   )
 # cardano_history %>% ggplot(aes(timestamp, price)) + geom_line() + theme_minimal()
 
-# basic technical indicators
-
-# lookback_window <- 14
-
-# Daily Returns
-
-# cardano_price_ts <- xts(cardano_history$price,cardano_history$timestamp)
-# cardano_daily_ret <- dailyReturn(cardano_price_ts)
-# cardano_daily_ret %>% ggplot(aes(Index,daily.returns)) + geom_line() + theme_minimal()
-
-# Relative Strength Index
-
-# cardano_rsi <- RSI(cardano_history$price, n = lookback_window, maType = "SMA")
-# cardano_rsi_ts <- xts(cardano_rsi,cardano_history$timestamp)
-# colnames(cardano_rsi_ts) <- c("rsi")
-# cardano_rsi_ts %>% ggplot(aes(Index,rsi)) + geom_line() + theme_minimal()
-
 # quantmod chartSeries
 lookback_window <- 14
 curr_date <- Sys.Date()
@@ -99,6 +82,74 @@ model_fit_arima_boosted <- arima_boost(min_n=2,learn_rate=0.015) %>%
   fit(price_close~timestamp+as.numeric(timestamp)+factor(month(timestamp,label=TRUE),ordered=F),
       data=training(splits))
 #> frequency = 24 observations per 1 quarter
+
+# Model 3: Error Trend Season (ets) exponential smoothing state space
+model_fit_ets <- exp_smoothing() %>%
+  set_engine(engine="ets") %>% fit(price_close~timestamp,data=training(splits))
+#> frequency = 24 observations per 1 quarter
+
+# Model 4: prophet
+model_fit_prophet <- prophet_reg() %>%
+  set_engine(engine="prophet") %>%
+  fit(price_close~timestamp,data=training(splits))
+
+# Model 5: Linear Regression (Parsnip)
+model_fit_lm <- linear_reg() %>%
+  set_engine(engine="lm") %>%
+  fit(price_close~as.numeric(timestamp)+factor(month(timestamp,label=TRUE),ordered=FALSE),
+      data=training(splits))
+
+# Model 6: MARS (Workflow)
+model_spec_mars <- mars(mode="regression") %>%
+  set_engine(engine="earth")
+recipe_spec <- recipe(price_close~timestamp,data=training(splits)) %>%
+  step_date(timestamp,features="month",ordinal=FALSE) %>%
+  step_mutate(timestamp_num=as.numeric(timestamp)) %>%
+  step_normalize(timestamp_num) %>%
+  step_rm(timestamp)
+wflw_fit_mars <- workflow() %>%
+  add_recipe(recipe_spec) %>%
+  add_model(model_spec_mars) %>%
+  fit(training(splits))
+
+# Model Table
+models_tbl <- modeltime_table(
+  model_fit_arima_no_boost,
+  model_fit_arima_boosted,
+  model_fit_ets,
+  model_fit_prophet,
+  model_fit_lm,
+  wflw_fit_mars
+)
+
+# Calibrate model to test set
+calibration_tbl <- models_tbl %>%
+  modeltime_calibrate(new_data=testing(splits))
+
+calibration_tbl %>% modeltime_forecast(
+  new_data=testing(splits),
+  actual_data=cardano_history_total
+) %>%
+  plot_modeltime_forecast(
+    .legend_max_width=25,
+    .interactive=interactive
+  )
+
+# metrics
+calibration_tbl %>% 
+  modeltime_accuracy() %>%
+  table_modeltime_accuracy(
+    .interactive=interactive
+  )
+
+# refit to full dataset & forecast forward
+refit_tbl <- calibration_tbl %>%
+  modeltime_refit(data=cardano_history_total)
+refit_tbl %>% modeltime_forecast(h="1 month",actual_data=cardano_history_total,conf_interval = 0.95) %>%
+  plot_modeltime_forecast(
+    .legend_max_width=25,
+    .interactive=interactive
+  )
 
 ## Take a snapshot of installed packages
 packrat::snapshot()
