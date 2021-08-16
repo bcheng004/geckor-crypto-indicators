@@ -2,8 +2,22 @@
 remove(list=ls())
 cat("\014")
 # init packrat
-packrat::init(getwd())
+# take a look at renv
+renv::init(bare=TRUE)
 # load libraries
+if (!requireNamespace("glue")){
+  install.packages("glue")
+} else {
+  suppressPackageStartupMessages(library("glue"))
+}
+packages_no_glue <- c("geckor","dplyr","ggplot2","stringr",
+                      "TTR","quantmod","lubridate","xgboost",
+                      "tidymodels","modeltime","tidyverse","timetk")
+for (p in packages_no_glue){
+  if (!requireNamespace(glue('{p}'))){
+    install.packages(glue('{p}'))
+  }
+}
 suppressPackageStartupMessages(library(geckor))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(ggplot2))
@@ -151,5 +165,4 @@ refit_tbl %>% modeltime_forecast(h="1 month",actual_data=cardano_history_total,c
     .interactive=interactive
   )
 
-## Take a snapshot of installed packages
-packrat::snapshot()
+# Take snapshot with renv
